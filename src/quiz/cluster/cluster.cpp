@@ -47,44 +47,69 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData(std::vector<std::vector<float>> p
 void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Box window, int& iteration, uint depth=0)
 {
 
-	if(node!=NULL)
+    if(node!=NULL)
+    {
+	Box upperWindow = window;
+	Box lowerWindow = window;
+	// split on x axis
+	if(depth%2==0)
 	{
-		Box upperWindow = window;
-		Box lowerWindow = window;
-		// split on x axis
-		if(depth%2==0)
-		{
-			viewer->addLine(pcl::PointXYZ(node->point[0], window.y_min, 0),pcl::PointXYZ(node->point[0], window.y_max, 0),0,0,1,"line"+std::to_string(iteration));
-			lowerWindow.x_max = node->point[0];
-			upperWindow.x_min = node->point[0];
-		}
-		// split on y axis
-		else
-		{
-			viewer->addLine(pcl::PointXYZ(window.x_min, node->point[1], 0),pcl::PointXYZ(window.x_max, node->point[1], 0),1,0,0,"line"+std::to_string(iteration));
-			lowerWindow.y_max = node->point[1];
-			upperWindow.y_min = node->point[1];
-		}
-		iteration++;
-
-		render2DTree(node->left,viewer, lowerWindow, iteration, depth+1);
-		render2DTree(node->right,viewer, upperWindow, iteration, depth+1);
-
-
+	    viewer->addLine(pcl::PointXYZ(node->point[0], window.y_min, 0),pcl::PointXYZ(node->point[0], window.y_max, 0),0,0,1,"line"+std::to_string(iteration));
+	    lowerWindow.x_max = node->point[0];
+	    upperWindow.x_min = node->point[0];
 	}
+	// split on y axis
+	else
+	{
+	    viewer->addLine(pcl::PointXYZ(window.x_min, node->point[1], 0),pcl::PointXYZ(window.x_max, node->point[1], 0),1,0,0,"line"+std::to_string(iteration));
+	    lowerWindow.y_max = node->point[1];
+	    upperWindow.y_min = node->point[1];
+	}
+	iteration++;
+
+	render2DTree(node->left,viewer, lowerWindow, iteration, depth+1);
+	render2DTree(node->right,viewer, upperWindow, iteration, depth+1);
+
+
+    }
 
 }
 
-std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
-{
+void clusterHelper(int indice, const std::vector<std::vector<float>> &points, std::vector<int> &cluster,
+                   std::vector<bool> &processed, KdTree *tree, float distanceTol) {
 
-	// TODO: Fill out this function to return list of indices for each cluster
-
-	std::vector<std::vector<int>> clusters;
- 
-	return clusters;
-
+    processed[indice] = true;
+    cluster.push_back(indice);
+    std::vector<int> nearest = tree->search(points[indice], distanceTol);
+    for (int id:nearest) {
+        if (!processed[id]) {
+            clusterHelper(id, points, cluster, processed, tree, distanceTol);
+        }
+    }
 }
+
+std::vector<std::vector<int>>euclideanCluster(const std::vector<std::vector<float>> &points, KdTree *tree, float distanceTol) {
+
+    // TODO: Fill out this function to return list of indices for each cluster
+
+    std::vector<std::vector<int>> clusters;
+    std::vector<bool> processed(points.size(), false);
+
+    int i = 0;
+    while (i < points.size()) {
+
+        if (processed[i]) {
+            i++;
+            continue;
+        }
+        std::vector<int> cluster;
+        clusterHelper(i, points, cluster, processed, tree, distanceTol);
+        clusters.push_back(cluster);
+        i++;
+    }
+    return clusters;
+}
+
 
 int main ()
 {
@@ -115,7 +140,7 @@ int main ()
   	std::cout << "Test Search" << std::endl;
   	std::vector<int> nearby = tree->search({-6,7},3.0);
   	for(int index : nearby)
-      std::cout << index << ",";
+	    std::cout << index << ",";
   	std::cout << std::endl;
 
   	// Time segmentation process
