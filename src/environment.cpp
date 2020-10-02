@@ -86,6 +86,57 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
 
 }
 
+// Test load pcd
+void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer){
+    ProcessPointClouds<pcl::PointXYZI>pointProcessor;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr
+	inputCloud = pointProcessor.loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
+    // renderPointCloud(viewer,inputCloud,"cloud");
+
+    // FilterCloud
+    float filterRes = 0.4;
+    Eigen::Vector4f minpoint(-10, -6.5, -2, 1);
+    Eigen::Vector4f maxpoint(30, 6.5, 1, 1);
+
+    // Filter cloud to reduce amount of points
+    pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud = pointProcessor.FilterCloud(inputCloud,
+										    filterRes,
+										    minpoint,
+										    maxpoint);
+    // Segment the filtered cloud into obstacles and road
+    int maxIterations = 40;
+    float distanceThreshold = 0.3;
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr>
+	segmentCloud = pointProcessor.SegmentPlane(filteredCloud, maxIterations, distanceThreshold);
+    renderPointCloud(viewer, segmentCloud.first, "obstCloud", Color(0, 0, 1));
+    renderPointCloud(viewer, segmentCloud.second, "planeCloud", Color(0, 1, 0));
+    // Cluster the obstacle cloud
+    float clusterTolerance = 0.5;
+    int minsize = 10;
+    int maxsize = 140;
+
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>
+	cloudClusters = pointProcessor.Clustering(segmentCloud.first,
+							     clusterTolerance,
+							     minsize, maxsize);
+    int clusterId = 0;
+    std::vector<Color> colors = {Color(1, 1, 0), Color(0, 1, 1), Color(1, 0, 1)};
+    // Find the bounding boxes for each cluster
+    for (pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : cloudClusters) {
+
+        std::cout << "cluster size";
+        pointProcessor.numPoints(cluster);
+        renderPointCloud(viewer, cluster, "obstCLoud" + std::to_string(clusterId),
+                         colors[clusterId % colors.size()]);
+        // Fourth: Find bounding boxes for each obstacle cluster
+        Box box = pointProcessor.BoundingBox(cluster);
+        renderBox(viewer, box, clusterId);
+        ++clusterId;
+
+    }
+
+}
+
 
 //setAngle: SWITCH CAMERA ANGLE {XY, TopDown, Side, FPS}
 void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& viewer)
@@ -118,7 +169,8 @@ int main (int argc, char** argv)
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
     CameraAngle setAngle = XY;
     initCamera(setAngle, viewer);
-    simpleHighway(viewer);
+//    simpleHighway(viewer);
+    cityBlock(viewer);
 
     while (!viewer->wasStopped ())
     {
