@@ -8,6 +8,14 @@
 // using templates for processPointClouds so also include .cpp to help linker
 #include "processPointClouds.cpp"
 
+// Global variables to test from the command line.
+int maxIterations = 40;
+float distanceThreshold = 0.3;
+float clusterTolerance = 0.5;
+int minsize = 10;
+int maxsize = 140;
+
+
 std::vector<Car> initHighway(bool renderScene, pcl::visualization::PCLVisualizer::Ptr& viewer)
 {
 
@@ -40,112 +48,111 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
     // ----------------------------------------------------
     // -----Open 3D viewer and display simple highway -----
     // ----------------------------------------------------
-    
     // RENDER OPTIONS
     bool renderScene = false;
     std::vector<Car> cars = initHighway(renderScene, viewer);
-    
-    // TODO:: Create lidar sensor
+    //
+    // Create lidar sensor
+    //
     Lidar* lidar = new Lidar(cars, 0.0);
-
-
-    // TODO:: Create point processor
+    //
+    // Create point processor
+    //
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcp = lidar->scan();
-    Vect3 origin = lidar->position;
+    //Vect3 origin = lidar->position;
     //renderRays(viewer, origin, pcp);
-//    renderPointCloud(viewer, pcp, "Laser");
+    //renderPointCloud(viewer, pcp, "Laser");
     // Process point cloud.
     ProcessPointClouds<pcl::PointXYZ> ppc;
+    //
     // Segment plane
-//    std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> segPlane = ppc.SegmentPlane(pcp, 10, 0.01);
-    std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr>	segmentCloud = ppc.SegmentPlane(pcp, 100, 0.2);
-//    renderPointCloud(viewer,segmentCloud.first,"obstCloud",Color(1,0,0));
+    //
+    std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr>	
+	segmentCloud = ppc.SegmentPlane(pcp, 100, 0.2);
     renderPointCloud(viewer,segmentCloud.second,"planeCloud",Color(1,1,1));
-
+    //
     // Cluster different obstacle cloud
+    //
     float clusterTolerance = 1.0;
     int minsize = 3;
     int maxsize = 30;
-    std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> cloudClusters = ppc.Clustering(segmentCloud.first, 1.0, 3, 30);
+    std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr>
+	cloudClusters = ppc.Clustering(segmentCloud.first, 1.0, 3, 30);
 
     int clusterId = 0;
     std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1)};
-
-    for (pcl::PointCloud<pcl::PointXYZ>::Ptr cluster : cloudClusters) {
-
+    //
+    // Find the bounding boxes for each cluster
+    //
+    for (pcl::PointCloud<pcl::PointXYZ>::Ptr cluster : cloudClusters)
+    {
         std::cout << "cluster size";
 	ppc.numPoints(cluster);
         renderPointCloud(viewer, cluster, "obstCLoud" + std::to_string(clusterId),
                          colors[clusterId % colors.size()]);
         // Find bounding boxes for each obstacle cluster
         Box box = ppc.BoundingBox(cluster);
-        renderBox(viewer, box, clusterId, colors[clusterId % colors.size()]);
+        renderBox(viewer, box, clusterId, colors[clusterId % colors.size()], 0.5);
         ++clusterId;
-
     }
-
 }
 
 // Test load pcd
 //void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer){
-    
 //    ProcessPointClouds<pcl::PointXYZI>pointProcessor;
 //    pcl::PointCloud<pcl::PointXYZI>::Ptr
 //	inputCloud = pointProcessor.loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
 //    // renderPointCloud(viewer,inputCloud,"cloud");
+
 void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer,
 	       ProcessPointClouds<pcl::PointXYZI>* pointProcessor,
-	       const pcl::PointCloud<pcl::PointXYZI>::Ptr& inputCloud){
-
-    // FilterCloud
+	       const pcl::PointCloud<pcl::PointXYZI>::Ptr& inputCloud)
+{
+    //
+    // Filter cloud to reduce amount of points
+    //
     float filterRes = 0.4;
     Eigen::Vector4f minpoint(-10, -6.5, -2, 1);
     Eigen::Vector4f maxpoint(30, 6.5, 1, 1);
-
-    // Filter cloud to reduce amount of points
     pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud = pointProcessor->FilterCloud(inputCloud,
 										    filterRes,
 										    minpoint,
 										    maxpoint);
+    //
     // Segment the filtered cloud into obstacles and road
-    int maxIterations = 40;
-    float distanceThreshold = 0.3;
+    //
     std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr>
 	segmentCloud = pointProcessor->SegmentPlane(filteredCloud, maxIterations, distanceThreshold);
     renderPointCloud(viewer, segmentCloud.first, "obstCloud", Color(0, 0, 1));
     renderPointCloud(viewer, segmentCloud.second, "planeCloud", Color(0, 1, 0));
+    //
     // Cluster the obstacle cloud
-    float clusterTolerance = 0.5;
-    int minsize = 10;
-    int maxsize = 140;
-
+    //
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>
 	cloudClusters = pointProcessor->Clustering(segmentCloud.first,
 							     clusterTolerance,
 							     minsize, maxsize);
     int clusterId = 0;
     std::vector<Color> colors = {Color(1, 1, 0), Color(0, 1, 1), Color(1, 0, 1)};
+    //
     // Find the bounding boxes for each cluster
-    for (pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : cloudClusters) {
-
+    //
+    for (pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : cloudClusters)
+    {
         std::cout << "cluster size";
         pointProcessor->numPoints(cluster);
-        renderPointCloud(viewer, cluster, "obstCLoud" + std::to_string(clusterId),
+        renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(clusterId),
                          colors[clusterId % colors.size()]);
-        // Fourth: Find bounding boxes for each obstacle cluster
+        // Find bounding boxes for each obstacle cluster
         Box box = pointProcessor->BoundingBox(cluster);
-        renderBox(viewer, box, clusterId);
+        renderBox(viewer, box, clusterId, Color(1,0,0), 0.5);
         ++clusterId;
-
     }
-
 }
-
 
 //setAngle: SWITCH CAMERA ANGLE {XY, TopDown, Side, FPS}
 void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& viewer)
 {
-
     viewer->setBackgroundColor (0, 0, 0);
     
     // set camera position and angle
@@ -168,23 +175,45 @@ void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& vi
 
 int main (int argc, char** argv)
 {
+
+    if(argc > 1)
+	maxIterations = atoi(argv[1]);
+    if(argc > 2)
+	distanceThreshold = atof(argv[2]);
+    if(argc > 3)
+	clusterTolerance = atof(argv[3]);
+    if(argc > 4)
+	minsize = atoi(argv[4]);
+    if(argc > 5)
+	maxsize = atoi(argv[5]);
+
     std::cout << "starting enviroment" << std::endl;
+    std::cout << "maxIterations \t\t" << maxIterations << std::endl;
+    std::cout << "distanceThreshold \t" << distanceThreshold << std::endl;
+    std::cout << "clusterTolerance \t" << clusterTolerance << std::endl;
+    std::cout << "minsize \t\t" << minsize << std::endl;
+    std::cout << "maxsize \t\t" << maxsize << std::endl;
+    
 
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
     CameraAngle setAngle = XY;
     initCamera(setAngle, viewer);
 //    simpleHighway(viewer);
 //    cityBlock(viewer);
-    ProcessPointClouds<pcl::PointXYZI>* pointProcessor = new ProcessPointClouds<pcl::PointXYZI>();
-    std::vector<boost::filesystem::path>
-	stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_1");
-    auto streamIterator = stream.begin();
-    pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud;
-
 //    while (!viewer->wasStopped ())
 //    {
 //        viewer->spinOnce ();
 //    }
+    //
+    // Process a stream of lidar data and display the result.
+    //
+    ProcessPointClouds<pcl::PointXYZI>* pointProcessor = new ProcessPointClouds<pcl::PointXYZI>();
+    std::vector<boost::filesystem::path>
+	stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_1");
+//	stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_2");	
+    auto streamIterator = stream.begin();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud;
+
     while (!viewer->wasStopped ())
     {
 	// Clear viewer
