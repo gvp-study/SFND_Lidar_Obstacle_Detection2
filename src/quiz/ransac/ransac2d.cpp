@@ -10,6 +10,7 @@
 pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData()
 {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
   	// Add inliers
   	float scatter = 0.6;
   	for(int i = -5; i < 5; i++)
@@ -22,7 +23,6 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData()
   		point.z = 0;
 
   		cloud->points.push_back(point);
-
   	}
   	// Add outliers
   	int numOutliers = 10;
@@ -36,7 +36,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData()
   		point.z = 0;
 
   		cloud->points.push_back(point);
-		
+
   	}
   	cloud->width = cloud->points.size();
   	cloud->height = 1;
@@ -127,6 +127,83 @@ std::unordered_set<int> Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int ma
 
 }
 
+std::unordered_set<int> Ransac3D(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
+{
+    // Time segmentation process
+    auto startTime = std::chrono::steady_clock::now();
+
+    std::unordered_set<int> inliersResult;
+    srand(time(NULL));
+	
+    // TODO: Fill in this function
+    int n = cloud->points.size();
+    // For max iterations
+    while(maxIterations--)
+    {
+	// Randomly sample subset and fit plane
+	std::unordered_set<int> inliers;
+	while(inliers.size() < 3)
+	    inliers.insert(rand()%n);
+
+	auto itr = inliers.begin();
+	float x1 = cloud->points[*itr].x;
+	float y1 = cloud->points[*itr].y;
+	float z1 = cloud->points[*itr].z;
+	itr++;
+	float x2 = cloud->points[*itr].x;
+	float y2 = cloud->points[*itr].y;
+	float z2 = cloud->points[*itr].z;
+	itr++;
+	float x3 = cloud->points[*itr].x;
+	float y3 = cloud->points[*itr].y;
+	float z3 = cloud->points[*itr].z;
+
+	float i = (y2-y1)*(z3-z1) - (z2-z1)*(y3-y1);
+	float j = (z2-z1)*(x3-x1) - (x2-x1)*(z3-z1);
+	float k = (x2-x1)*(y3-y1) - (y2-y1)*(x3-x1);
+	
+	float a = i;
+	float b = j;
+	float c = k;
+	float d = -(i*x1 + j*y1 + k*z1);
+	
+
+	for(int index = 0; index < n; index++)
+	{
+	    if(inliers.count(index) > 0)
+		continue;
+
+	    pcl::PointXYZ point = cloud->points[index];
+	    float x = point.x;
+	    float y = point.y;
+	    float z = point.z;
+	    float deno = hypot(a, hypot(b, c));
+	    float dist = fabs(a*x + b*y + c*z + d) / deno;
+
+	    if(dist <= distanceTol)
+	    {
+		inliers.insert(index);
+	    }
+	}
+
+	if(inliers.size() > inliersResult.size())
+	{
+	    inliersResult = inliers;
+	}
+    }
+    // Measure distance between every point and fitted line
+    // If distance is smaller than threshold count it as inlier
+
+    // Return indicies of inliers from fitted line with most inliers
+	
+    auto endTime = std::chrono::steady_clock::now();
+    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout << "RANSAC3D took " << elapsedTime.count() << " milliseconds" << std::endl;
+
+    return inliersResult;
+
+}
+
 int main ()
 {
 
@@ -134,11 +211,12 @@ int main ()
 	pcl::visualization::PCLVisualizer::Ptr viewer = initScene();
 
 	// Create data
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData();
+//	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData();
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData3D();
 	
 
 	// TODO: Change the max iteration and distance tolerance arguments for Ransac function
-	std::unordered_set<int> inliers = Ransac(cloud, 10, 0.5);
+	std::unordered_set<int> inliers = Ransac3D(cloud, 100, 0.25);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr  cloudInliers(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOutliers(new pcl::PointCloud<pcl::PointXYZ>());

@@ -210,7 +210,7 @@ int main (int argc, char** argv)
     ProcessPointClouds<pcl::PointXYZI>* pointProcessor = new ProcessPointClouds<pcl::PointXYZI>();
     std::vector<boost::filesystem::path>
 	stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_1");
-//	stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_2");	
+//stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_2");	
     auto streamIterator = stream.begin();
     pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud;
 
