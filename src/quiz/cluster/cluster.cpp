@@ -44,7 +44,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData(std::vector<std::vector<float>> p
 }
 
 
-void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Box window, int& iteration, uint depth=0)
+void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Box window, int& iteration,
+		  uint depth=0)
 {
 
     if(node!=NULL)
@@ -54,14 +55,18 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 	// split on x axis
 	if(depth%2==0)
 	{
-	    viewer->addLine(pcl::PointXYZ(node->point[0], window.y_min, 0),pcl::PointXYZ(node->point[0], window.y_max, 0),0,0,1,"line"+std::to_string(iteration));
+	    viewer->addLine(pcl::PointXYZ(node->point[0], window.y_min, 0),
+			    pcl::PointXYZ(node->point[0], window.y_max, 0),
+			    0,0,1,"line"+std::to_string(iteration));
 	    lowerWindow.x_max = node->point[0];
 	    upperWindow.x_min = node->point[0];
 	}
 	// split on y axis
 	else
 	{
-	    viewer->addLine(pcl::PointXYZ(window.x_min, node->point[1], 0),pcl::PointXYZ(window.x_max, node->point[1], 0),1,0,0,"line"+std::to_string(iteration));
+	    viewer->addLine(pcl::PointXYZ(window.x_min, node->point[1], 0),
+			    pcl::PointXYZ(window.x_max, node->point[1], 0),
+			    1,0,0,"line"+std::to_string(iteration));
 	    lowerWindow.y_max = node->point[1];
 	    upperWindow.y_min = node->point[1];
 	}
@@ -88,7 +93,8 @@ void clusterHelper(int indice, const std::vector<std::vector<float>> &points, st
     }
 }
 
-std::vector<std::vector<int>>euclideanCluster(const std::vector<std::vector<float>> &points, KdTree *tree, float distanceTol) {
+std::vector<std::vector<int>>euclideanCluster(const std::vector<std::vector<float>> &points,
+					      KdTree *tree, float distanceTol) {
 
     // TODO: Fill out this function to return list of indices for each cluster
 
