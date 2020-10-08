@@ -73,11 +73,8 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
     //
     // Cluster different obstacle cloud
     //
-    float clusterTolerance = 1.0;
-    int minsize = 3;
-    int maxsize = 30;
     std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr>
-	cloudClusters = ppc.Clustering(segmentCloud.first, 1.0, 3, 30);
+	cloudClusters = ppc.Clustering(segmentCloud.first, clusterTolerance, minsize, maxsize);
 
     int clusterId = 0;
     std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1)};
@@ -130,8 +127,8 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer,
     //
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>
 	cloudClusters = pointProcessor->Clustering(segmentCloud.first,
-							     clusterTolerance,
-							     minsize, maxsize);
+						   clusterTolerance,
+						   minsize, maxsize);
     int clusterId = 0;
     std::vector<Color> colors = {Color(1, 1, 0), Color(0, 1, 1), Color(1, 0, 1)};
     //
