@@ -14,7 +14,7 @@ float distanceThreshold = 0.3;
 float clusterTolerance = 0.5;
 int minsize = 10;
 int maxsize = 140;
-
+bool usePCL = false;
 
 std::vector<Car> initHighway(bool renderScene, pcl::visualization::PCLVisualizer::Ptr& viewer)
 {
@@ -118,17 +118,26 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer,
     //
     // Segment the filtered cloud into obstacles and road
     //
-    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr>
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud;
+    if(!usePCL)
 	segmentCloud = pointProcessor->SegmentPlane(filteredCloud, maxIterations, distanceThreshold);
+    else
+	segmentCloud = pointProcessor->SegmentPlanePCL(filteredCloud, maxIterations, distanceThreshold);
     renderPointCloud(viewer, segmentCloud.first, "obstCloud", Color(0, 0, 1));
     renderPointCloud(viewer, segmentCloud.second, "planeCloud", Color(0, 1, 0));
     //
     // Cluster the obstacle cloud
     //
-    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters;
+    if(!usePCL)
 	cloudClusters = pointProcessor->Clustering(segmentCloud.first,
 						   clusterTolerance,
 						   minsize, maxsize);
+    else
+	cloudClusters = pointProcessor->ClusteringPCL(segmentCloud.first,
+						      clusterTolerance,
+						      minsize, maxsize);
+	
     int clusterId = 0;
     std::vector<Color> colors = {Color(1, 1, 0), Color(0, 1, 1), Color(1, 0, 1)};
     //
@@ -183,6 +192,8 @@ int main (int argc, char** argv)
 	minsize = atoi(argv[4]);
     if(argc > 5)
 	maxsize = atoi(argv[5]);
+    if(argc > 6)
+	usePCL = true;
 
     std::cout << "starting enviroment" << std::endl;
     std::cout << "maxIterations \t\t" << maxIterations << std::endl;
