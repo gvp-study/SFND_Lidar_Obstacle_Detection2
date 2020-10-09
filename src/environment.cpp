@@ -67,14 +67,21 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
     //
     // Segment plane
     //
-    std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr>	
+    std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr>	segmentCloud;
+    if(!usePCL)
 	segmentCloud = ppc.SegmentPlane(pcp, 100, 0.2);
+    else
+	segmentCloud = ppc.SegmentPlanePCL(pcp, 100, 0.2);
+	
     renderPointCloud(viewer,segmentCloud.second,"planeCloud",Color(1,1,1));
     //
     // Cluster different obstacle cloud
     //
-    std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr>
+    std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> cloudClusters;
+    if(!usePCL)
 	cloudClusters = ppc.Clustering(segmentCloud.first, clusterTolerance, minsize, maxsize);
+    else
+	cloudClusters = ppc.ClusteringPCL(segmentCloud.first, clusterTolerance, minsize, maxsize);
 
     int clusterId = 0;
     std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1)};
@@ -145,7 +152,7 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer,
     //
     for (pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : cloudClusters)
     {
-        std::cout << "cluster size";
+        std::cout << "cluster size ";
         pointProcessor->numPoints(cluster);
         renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(clusterId),
                          colors[clusterId % colors.size()]);
@@ -206,19 +213,20 @@ int main (int argc, char** argv)
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
     CameraAngle setAngle = XY;
     initCamera(setAngle, viewer);
+    //
+    // Process a stream of lidar data and display the result.
+    //
 //    simpleHighway(viewer);
 //    cityBlock(viewer);
 //    while (!viewer->wasStopped ())
 //    {
 //        viewer->spinOnce ();
 //    }
-    //
-    // Process a stream of lidar data and display the result.
-    //
+
     ProcessPointClouds<pcl::PointXYZI>* pointProcessor = new ProcessPointClouds<pcl::PointXYZI>();
     std::vector<boost::filesystem::path>
-	stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_1");
-//stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_2");	
+//	stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_1");
+	stream = pointProcessor->streamPcd("../src/sensors/data/pcd/data_2");	
     auto streamIterator = stream.begin();
     pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud;
 

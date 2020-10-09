@@ -31,7 +31,8 @@ KdTree()
             *node = new Node(point, id);
         } else {
             // calculate current dim (1 means x axes, 2means y axes)
-            uint cd = depth % 2;
+//            uint cd = depth % 2;
+	    uint cd = depth % point.size();
             if (point[cd] < ((*node)->point[cd])) {
                 insertHelper(&((*node)->left), depth + 1, point, id);
             } else {
@@ -64,7 +65,8 @@ KdTree()
 		}
 	    }
 	    // check across boundary
-	    int d2 = depth % 2;
+//	    int d2 = depth % 2;
+	    int d2 = depth % target.size();
 	    if ((target[d2] - distanceTol) < node->point[d2])
 	    {
 		searchHelper(target, node->left, depth + 1, distanceTol, ids);
